@@ -1,0 +1,77 @@
+
+day01.part1 : '{IO, Exception} ()
+day01.part1 = do
+  submitSolution (Day 1) (Part 1) day01.part1.solve
+
+day01.part2 : '{IO, Exception} ()
+day01.part2 = do
+  submitSolution (Day 1) (Part 2) day01.part2.solve
+
+structural type Input = { lines: [Nat] }
+
+day01.part1.solve : Text -> {Exception, IO} Text
+day01.part1.solve text = 
+  input = runParser day01.parseInput text
+  Nat.sum (Input.lines input) |> toText
+
+day01.part2.solve : Text -> {Exception, IO} Text
+day01.part2.solve text = 
+  input = runParser day01.parseInput text
+  todo "implement solution for day 1 part 2"
+
+day01.parseInput : '{Parse Text} Input
+day01.parseInput text = 
+  use lib.base.Text
+  lines = pickDigits text
+  List.map findNumber lines |> Input
+
+digitPattern = CharQuery.Ranges [(?0, ?9)] 
+
+day01.findNumber : {Parse Text}[Text] -> Nat
+day01.findNumber digits = 
+  _digits = List.filter (x -> not (Text.isEmpty x)) digits
+  match (List.head _digits, List.last _digits) with
+    (Some a, Some b) -> match (a Text.++ b) |> Nat.fromText with
+      None -> fail (UserDefined ("could not parse nat: " ++ a ++ b))
+      Some n -> n
+    _ -> fail (UserDefined "line contains no digits")
+  
+day01.pickDigits : '{Parse err} [[Text]]
+day01.pickDigits text =
+  use Parse
+  parseNextDigit _ =
+    c = !parseAlphaNum
+    if isMatch patterns.digit c then c else ""
+  parseLine = many1 parseNextDigit
+  result = sep1 eol parseLine ()
+  !endOfString
+  result
+
+eol = Parse.or crlf newline
+
+runParser : '{Parse err} a -> Text -> {Exception, IO} a
+runParser p text = 
+  match Parse.run p text with
+    Left err -> raiseGeneric "Parse error" err
+    Right a -> a
+
+day01.example = """
+1abc2
+pqr3stu8vwx
+a1b2c3d4e5f
+treb7uchet
+"""
+
+day01.part1.solveExample _ = day01.part1.solve day01.example
+day01.part2.solveExample _ = day01.part2.solve day01.example
+
+-- Parsing primitives
+
+parseDigit _ = takePattern patterns.digit
+parseAlphaNum = Parse.or '(takePattern patterns.digit) '(takePattern asciiLetter)
+
+
+> Parse.run.debug None '(takePattern lib.base.Text.patterns.digit) "123"
+> Parse.run.debug None pickDigits "a1a2a"
+-- > Parse.run.debug None (until parseDigit) "a"
+
