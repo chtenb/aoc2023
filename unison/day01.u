@@ -40,6 +40,7 @@ day01.pickDigits : '{Parse err} [[Text]]
 day01.pickDigits text =
   use Parse
   parseNextDigit _ =
+    maybeNumberText = parseMaybeNumberText
     c = !parseAlphaNum
     if isMatch patterns.digit c then c else ""
   parseLine = many1 parseNextDigit
@@ -56,10 +57,13 @@ runParser p text =
     Right a -> a
 
 day01.example = """
-1abc2
-pqr3stu8vwx
-a1b2c3d4e5f
-treb7uchet
+two1nine
+eightwothree
+abcone2threexyz
+xtwone3four
+4nineeightseven2
+zoneight234
+7pqrstsixteen
 """
 
 day01.part1.solveExample _ = day01.part1.solve day01.example
@@ -67,11 +71,43 @@ day01.part2.solveExample _ = day01.part2.solve day01.example
 
 -- Parsing primitives
 
+Parse.oneOf : [('{Parse Text} Text)] -> Unit -> Unit -> {Parse Text} Text
+Parse.oneOf parsers _ = List.foldRight Parse.or (Parse.bail "blah") parsers
+
+Parse.bail : Text -> '{Parse Text} Text
+Parse.bail msg = 
+  Parse.fail (UserDefined msg)
+
+Parse.word : Text -> '{Parse Text} Text
+Parse.word word _ =
+  Parse.text! word
+  word
+
 parseDigit _ = takePattern patterns.digit
+
+parseDigitWord : Unit -> Unit -> {Parse Text} Text
+parseDigitWord = Parse.oneOf [
+  Parse.word "one",
+  Parse.word "two",
+  Parse.word "three",
+  Parse.word "four",
+  Parse.word "five",
+  Parse.word "size",
+  Parse.word "seven",
+  Parse.word "eight",
+  Parse.word "nine",
+  ]
 parseAlphaNum = Parse.or '(takePattern patterns.digit) '(takePattern asciiLetter)
+parseNumberText = Parse.or parseDigit (parseDigitWord  ())
+parseMaybeNumberText _ =
+  n = !parseNumberText
+  Just n
+skipMaybeLetterText _ =
+  _ = takePattern patterns.letter
+  Nothing
 
 
-> Parse.run.debug None '(takePattern lib.base.Text.patterns.digit) "123"
-> Parse.run.debug None pickDigits "a1a2a"
+-- > Parse.run.debug None '(takePattern lib.base.Text.patterns.digit) "123"
+-- > Parse.run.debug None pickDigits "a1a2a"
 -- > Parse.run.debug None (until parseDigit) "a"
 
